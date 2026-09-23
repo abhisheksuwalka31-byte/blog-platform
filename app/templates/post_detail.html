@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} - BlogVerse{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+
+  <!-- Breadcrumbs & Back -->
+  <div class="flex items-center justify-between mb-8">
+    <a href="/" class="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition">
+      <i class="fa-solid fa-arrow-left"></i>
+      <span>Back to all posts</span>
+    </a>
+
+    <!-- Author Actions (Edit / Delete if author) -->
+    {% if current_user and current_user.id == post.author_id %}
+      <div class="flex items-center space-x-2">
+        <a href="/posts/{{ post.id }}/edit" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+          <i class="fa-solid fa-pen text-slate-500"></i>
+          <span>Edit Article</span>
+        </a>
+        <button onclick="confirmDeletePost({{ post.id }})" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-rose-200 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition">
+          <i class="fa-solid fa-trash-can"></i>
+          <span>Delete</span>
+        </button>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Article Header -->
+  <header class="mb-8">
+    {% if not post.is_published %}
+      <div class="mb-4 inline-flex items-center space-x-2 px-3 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-bold">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Draft - Only visible to you</span>
+      </div>
+    {% endif %}
+
+    <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+      {{ post.title }}
+    </h1>
+
+    <!-- Meta & Author row -->
+    <div class="flex items-center justify-between py-4 border-y border-slate-200/80">
+      <div class="flex items-center space-x-3.5">
+        <img src="{{ post.author.avatar_url or 'https://api.dicebear.com/7.x/initials/svg?seed=' + post.author.username }}" alt="{{ post.author.username }}" class="w-11 h-11 rounded-full border border-slate-200">
+        <div>
+          <div class="font-bold text-slate-900 text-sm">
+            {{ post.author.full_name or post.author.username }}
+          </div>
+          <div class="text-xs text-slate-500 flex items-center space-x-2">
+            <span>{{ post.created_at.strftime('%B %d, %Y') }}</span>
+            <span>•</span>
+            <span>{{ post.reading_time_minutes }} min read</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Like action in header -->
+      <button 
+        id="like-btn-header"
+        onclick="toggleLike({{ post.id }})" 
+        class="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl border {% if post.is_liked_by_viewer %}bg-rose-50 border-rose-200 text-rose-600{% else %}bg-white border-slate-200 text-slate-700 hover:bg-slate-50{% endif %} text-xs font-bold transition shadow-sm"
+      >
+        <i class="fa-solid fa-heart {% if post.is_liked_by_viewer %}text-rose-500{% else %}text-slate-400{% endif %} text-sm"></i>
+        <span id="like-count-header">{{ post.likes_count }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Article Markdown Content -->
+  <article class="prose prose-slate max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-indigo-600 prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-img:rounded-2xl pb-10 border-b border-slate-200">
+    {{ post.content_html | safe }}
+  </article>
+
+  <!-- Tags -->
+  {% if post.tags %}
+    <div class="py-6 border-b border-slate-200 flex flex-wrap gap-2 items-center">
+      <span class="text-xs font-semibold text-slate-400">Tagged in:</span>
+      {% for tag in post.tags.split(',') %}
+        {% if tag.strip() %}
+          <a href="/?tag={{ tag.strip() }}" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition">
+            #{{ tag.strip() }}
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Author Card -->
+  <div class="my-10 p-6 rounded-2xl bg-white border border-slate-200 flex items-start space-x-4 shadow-sm">
+    <img src="{{ post.author.avatar_url or 'https://api.dicebear.com/7.x/initials/svg?seed=' + post.author.username }}" alt="{{ post.author.username }}" class="w-14 h-14 rounded-full border border-slate-200">
+    <div class="flex-1">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-slate-900 text-base">Written by {{ post.author.full_name or post.author.username }}</h3>
+      </div>
+      <p class="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
+        {{ post.author.bio or "Contributing writer on BlogVerse, sharing experiences, code, and modern technology thoughts." }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Social Bar: Likes & Comments Navigation -->
+  <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-100/80 mb-10">
+    <div class="flex items-center space-x-6">
+      <button 
+        id="like-btn-bottom"
+        onclick="toggleLike({{ post.id }})" 
+        class="flex items-center space-x-2 text-sm font-bold {% if post.is_liked_by_viewer %}text-rose-600{% else %}text-slate-700 hover:text-rose-600{% endif %} transition focus:outline-none"
+      >
+        <i class="fa-solid fa-heart {% if post.is_liked_by_viewer %}text-rose-500{% else %}text-slate-400{% endif %} text-base"></i>
+        <span id="like-count-bottom">{{ post.likes_count }}</span>
+        <span>Likes</span>
+      </button>
+
+      <div class="flex items-center space-x-2 text-sm font-bold text-slate-700">
+        <i class="fa-solid fa-comment text-slate-400 text-base"></i>
+        <span id="comments-count">{{ post.comments | length }}</span>
+        <span>Comments</span>
+      </div>
+    </div>
+
+    <div>
+      <button onclick="navigator.clipboard.writeText(window.location.href); showToast('Article link copied to clipboard!');" class="text-xs font-semibold text-slate-600 hover:text-indigo-600 flex items-center space-x-1.5 px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-sm transition">
+        <i class="fa-solid fa-share-nodes"></i>
+        <span>Share</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Comments Section -->
+  <section id="comments-section" class="pt-4">
+    <h2 class="text-2xl font-extrabold text-slate-900 mb-6">Discussion (<span id="comment-heading-count">{{ post.comments | length }}</span>)</h2>
+
+    <!-- Comment Form -->
+    {% if current_user %}
+      <form id="comment-form" onsubmit="submitComment(event, {{ post.id }})" class="mb-10 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-start space-x-3 mb-3">
+          <img src="{{ current_user.avatar_url or 'https://api.dicebear.com/7.x/initials/svg?seed=' + current_user.username }}" alt="{{ current_user.username }}" class="w-8 h-8 rounded-full border border-slate-200">
+          <div class="flex-1">
+            <textarea 
+              id="comment-content" 
+              rows="3" 
+              required 
+              placeholder="What are your thoughts on this story? Markdown supported." 
+              class="w-full p-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition resize-none"
+            ></textarea>
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" id="comment-submit-btn" class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition">
+            <i class="fa-solid fa-paper-plane text-xs"></i>
+            <span>Post Comment</span>
+          </button>
+        </div>
+      </form>
+    {% else %}
+      <!-- Guest Notice to Log In -->
+      <div class="mb-10 p-6 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-center">
+        <h4 class="font-bold text-slate-900 text-base mb-1">Join the conversation</h4>
+        <p class="text-xs sm:text-sm text-slate-600 mb-4">Log in or create a free account to like this article and share your perspective.</p>
+        <div class="flex items-center justify-center space-x-3">
+          <a href="/login?redirect=/posts/{{ post.slug }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl shadow-sm hover:bg-indigo-700 transition">
+            Sign In
+          </a>
+          <a href="/register?redirect=/posts/{{ post.slug }}" class="inline-flex items-center px-4 py-2 bg-white text-slate-700 text-xs font-bold rounded-xl border border-slate-200 hover:bg-slate-50 transition">
+            Create Account
+          </a>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Comment Feed -->
+    <div id="comments-list" class="space-y-4">
+      {% for comment in post.comments %}
+        <div id="comment-card-{{ comment.id }}" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start space-x-3.5">
+          <img src="{{ comment.author.avatar_url or 'https://api.dicebear.com/7.x/initials/svg?seed=' + comment.author.username }}" alt="{{ comment.author.username }}" class="w-9 h-9 rounded-full border border-slate-100">
+          <div class="flex-1">
+            <div class="flex items-center justify-between mb-1">
+              <div>
+                <span class="font-bold text-slate-900 text-xs">{{ comment.author.full_name or comment.author.username }}</span>
+                <span class="text-[11px] text-slate-400 ml-2">{{ comment.created_at.strftime('%b %d, %Y • %H:%M') }}</span>
+              </div>
+              
+              <!-- Delete Comment if comment author OR post author -->
+              {% if current_user and (current_user.id == comment.author_id or current_user.id == post.author_id) %}
+                <button onclick="deleteComment({{ comment.id }})" class="text-slate-400 hover:text-rose-600 text-xs transition" title="Delete comment">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              {% endif %}
+            </div>
+            <p class="text-slate-700 text-xs sm:text-sm leading-relaxed whitespace-pre-line">{{ comment.content }}</p>
+          </div>
+        </div>
+      {% else %}
+        <div id="no-comments-msg" class="text-center py-8 text-slate-400 text-xs">
+          No comments yet. Start the conversation!
+        </div>
+      {% endfor %}
+    </div>
+
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const IS_AUTHENTICATED = {{ 'true' if current_user else 'false' }};
+  const CURRENT_USER_ID = {{ current_user.id if current_user else 'null' }};
+  const POST_AUTHOR_ID = {{ post.author_id }};
+
+  async function toggleLike(postId) {
+    if (!IS_AUTHENTICATED) {
+      showToast('Please sign in to like this post.', 'error');
+      setTimeout(() => {
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      }, 1000);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/v1/posts/${postId}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to toggle like');
+      }
+
+      const data = await response.json();
+      
+      // Update counters
+      document.getElementById('like-count-header').innerText = data.likes_count;
+      document.getElementById('like-count-bottom').innerText = data.likes_count;
+
+      // Update button styling
+      const headerBtn = document.getElementById('like-btn-header');
+      const headerIcon = headerBtn.querySelector('i');
+      const bottomBtn = document.getElementById('like-btn-bottom');
+      const bottomIcon = bottomBtn.querySelector('i');
+
+      if (data.liked) {
+        headerBtn.className = "inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl border bg-rose-50 border-rose-200 text-rose-600 text-xs font-bold transition shadow-sm";
+        headerIcon.className = "fa-solid fa-heart text-rose-500 text-sm";
+        bottomBtn.className = "flex items-center space-x-2 text-sm font-bold text-rose-600 transition focus:outline-none";
+        bottomIcon.className = "fa-solid fa-heart text-rose-500 text-base";
+        showToast('Liked post!');
+      } else {
+        headerBtn.className = "inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl border bg-white border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition shadow-sm";
+        headerIcon.className = "fa-solid fa-heart text-slate-400 text-sm";
+        bottomBtn.className = "flex items-center space-x-2 text-sm font-bold text-slate-700 hover:text-rose-600 transition focus:outline-none";
+        bottomIcon.className = "fa-solid fa-heart text-slate-400 text-base";
+        showToast('Unliked post.');
+      }
+    } catch (err) {
+      showToast('Error updating like. Try again.', 'error');
+    }
+  }
+
+  async function submitComment(e, postId) {
+    e.preventDefault();
+    const textarea = document.getElementById('comment-content');
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    const submitBtn = document.getElementById('comment-submit-btn');
+    submitBtn.disabled = true;
+
+    try {
+      const response = await fetch(`/api/v1/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to post comment');
+      }
+
+      const newComment = await response.json();
+      textarea.value = '';
+
+      // Remove "no comments" message if present
+      const emptyMsg = document.getElementById('no-comments-msg');
+      if (emptyMsg) emptyMsg.remove();
+
+      // Append new comment card
+      const list = document.getElementById('comments-list');
+      const card = document.createElement('div');
+      card.id = `comment-card-${newComment.id}`;
+      card.className = "bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start space-x-3.5 transition animate-fade-in";
+      card.innerHTML = `
+        <img src="${newComment.author.avatar_url || 'https://api.dicebear.com/7.x/initials/svg?seed=' + newComment.author.username}" alt="${newComment.author.username}" class="w-9 h-9 rounded-full border border-slate-100">
+        <div class="flex-1">
+          <div class="flex items-center justify-between mb-1">
+            <div>
+              <span class="font-bold text-slate-900 text-xs">${newComment.author.full_name || newComment.author.username}</span>
+              <span class="text-[11px] text-slate-400 ml-2">Just now</span>
+            </div>
+            <button onclick="deleteComment(${newComment.id})" class="text-slate-400 hover:text-rose-600 text-xs transition" title="Delete comment">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+          <p class="text-slate-700 text-xs sm:text-sm leading-relaxed whitespace-pre-line">${escapeHtml(newComment.content)}</p>
+        </div>
+      `;
+      list.prepend(card);
+
+      // Increment counts
+      const countEl = document.getElementById('comments-count');
+      const headingCountEl = document.getElementById('comment-heading-count');
+      const cur = parseInt(countEl.innerText || '0') + 1;
+      countEl.innerText = cur;
+      headingCountEl.innerText = cur;
+
+      showToast('Comment posted successfully!');
+    } catch (err) {
+      showToast('Error posting comment. Try again.', 'error');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  async function deleteComment(commentId) {
+    if (!confirm('Are you sure you want to delete this comment?')) return;
+
+    try {
+      const response = await fetch(`/api/v1/comments/${commentId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete comment');
+      }
+
+      const card = document.getElementById(`comment-card-${commentId}`);
+      if (card) {
+        card.remove();
+      }
+
+      // Decrement counts
+      const countEl = document.getElementById('comments-count');
+      const headingCountEl = document.getElementById('comment-heading-count');
+      const cur = Math.max(0, parseInt(countEl.innerText || '1') - 1);
+      countEl.innerText = cur;
+      headingCountEl.innerText = cur;
+
+      showToast('Comment deleted.');
+    } catch (err) {
+      showToast('Could not delete comment.', 'error');
+    }
+  }
+
+  async function confirmDeletePost(postId) {
+    if (!confirm('Are you sure you want to delete this entire article? This action cannot be undone.')) return;
+
+    try {
+      const response = await fetch(`/api/v1/posts/${postId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete post');
+      }
+
+      showToast('Article deleted.');
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 800);
+    } catch (err) {
+      showToast('Failed to delete article.', 'error');
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.innerText = text;
+    return div.innerHTML;
+  }
+</script>
+{% endblock %}

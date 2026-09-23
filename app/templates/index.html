@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}BlogVerse - Explore Stories, Ideas, and Insights{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+  
+  <!-- Hero Section -->
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-8 sm:p-12 mb-12 shadow-xl">
+    <div class="relative z-10 max-w-2xl">
+      <span class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 mb-4">
+        <i class="fa-solid fa-sparkles text-amber-300"></i>
+        <span>Welcome to the Community</span>
+      </span>
+      <h1 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight mb-4">
+        Where ideas turn into conversations.
+      </h1>
+      <p class="text-indigo-200 text-base sm:text-lg mb-8 leading-relaxed">
+        Read insightful articles written by developers and thinkers worldwide. Join in, share your own stories, like, and join the discussion.
+      </p>
+      <div class="flex flex-wrap items-center gap-3">
+        {% if not current_user %}
+          <a href="/register" class="inline-flex items-center space-x-2 bg-white text-slate-900 font-bold px-5 py-3 rounded-xl hover:bg-slate-100 shadow transition">
+            <span>Start Writing Free</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </a>
+          <a href="/login" class="inline-flex items-center space-x-2 bg-indigo-700/60 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl border border-indigo-500/40 transition">
+            <span>Sign In</span>
+          </a>
+        {% else %}
+          <a href="/posts/new" class="inline-flex items-center space-x-2 bg-white text-indigo-700 font-bold px-5 py-3 rounded-xl hover:bg-slate-100 shadow transition">
+            <i class="fa-solid fa-pen-fancy text-xs"></i>
+            <span>Create New Article</span>
+          </a>
+          <a href="/dashboard" class="inline-flex items-center space-x-2 bg-indigo-700/60 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl border border-indigo-500/40 transition">
+            <i class="fa-solid fa-table-columns text-xs"></i>
+            <span>Go to Dashboard</span>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Abstract background shape -->
+    <div class="absolute -right-20 -bottom-20 w-96 h-96 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute right-40 top-0 w-64 h-64 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none"></div>
+  </div>
+
+  <!-- Search & Tag Filter Bar -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200">
+    <div class="flex items-center space-x-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+      <a href="/" class="px-3 py-1.5 rounded-lg text-xs font-bold transition {% if not active_tag %}bg-indigo-600 text-white{% else %}bg-slate-200/70 text-slate-700 hover:bg-slate-200{% endif %}">
+        All Posts
+      </a>
+      {% for tag in popular_tags %}
+        <a href="/?tag={{ tag }}" class="px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap {% if active_tag == tag %}bg-indigo-600 text-white{% else %}bg-slate-200/70 text-slate-700 hover:bg-slate-200{% endif %}">
+          #{{ tag }}
+        </a>
+      {% endfor %}
+    </div>
+
+    {% if search_query or active_tag %}
+      <div class="flex items-center space-x-2 text-xs text-slate-500">
+        <span>Showing results for: <strong class="text-slate-800">{% if search_query %}"{{ search_query }}"{% endif %} {% if active_tag %}#{{ active_tag }}{% endif %}</strong></span>
+        <a href="/" class="text-indigo-600 hover:underline font-semibold ml-2">Clear</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Posts Grid -->
+  {% if posts %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+      {% for post in posts %}
+        <article class="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between overflow-hidden group">
+          <div class="p-6">
+            <!-- Author Header -->
+            <div class="flex items-center space-x-3 mb-4">
+              <img src="{{ post.author.avatar_url or 'https://api.dicebear.com/7.x/initials/svg?seed=' + post.author.username }}" alt="{{ post.author.username }}" class="w-9 h-9 rounded-full border border-slate-100 bg-slate-50">
+              <div class="text-xs">
+                <span class="font-bold text-slate-800">{{ post.author.full_name or post.author.username }}</span>
+                <div class="text-slate-400">
+                  {{ post.created_at.strftime('%b %d, %Y') }} • {{ post.reading_time_minutes }} min read
+                </div>
+              </div>
+            </div>
+
+            <!-- Title & Summary -->
+            <a href="/posts/{{ post.slug }}" class="block group-hover:text-indigo-600 transition">
+              <h2 class="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition leading-snug mb-2 line-clamp-2">
+                {{ post.title }}
+              </h2>
+            </a>
+            
+            <p class="text-slate-600 text-xs sm:text-sm line-clamp-3 mb-4 leading-relaxed">
+              {{ post.summary or post.content[:140] }}
+            </p>
+
+            <!-- Tags -->
+            {% if post.tags %}
+              <div class="flex flex-wrap gap-1.5 mb-4">
+                {% for tag in post.tags.split(',') %}
+                  {% if tag.strip() %}
+                    <a href="/?tag={{ tag.strip() }}" class="inline-block px-2 py-0.5 text-[11px] font-medium rounded-md bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition">
+                      #{{ tag.strip() }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Card Footer (Likes & Comments counts) -->
+          <div class="px-6 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div class="flex items-center space-x-4">
+              <span class="flex items-center space-x-1.5 hover:text-rose-600 transition">
+                <i class="fa-solid fa-heart {% if post.is_liked_by_viewer %}text-rose-500{% else %}text-slate-400{% endif %}"></i>
+                <span class="font-semibold">{{ post.likes_count }}</span>
+              </span>
+              <span class="flex items-center space-x-1.5 hover:text-indigo-600 transition">
+                <i class="fa-regular fa-comment text-slate-400"></i>
+                <span class="font-semibold">{{ post.comments_count }}</span>
+              </span>
+            </div>
+            <a href="/posts/{{ post.slug }}" class="font-semibold text-indigo-600 hover:text-indigo-800 transition flex items-center space-x-1">
+              <span>Read</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 p-8 max-w-lg mx-auto">
+      <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-regular fa-newspaper"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 mb-1">No articles found</h3>
+      <p class="text-slate-500 text-sm mb-6">
+        {% if search_query or active_tag %}
+          No published posts matched your search criteria.
+        {% else %}
+          Be the very first author to share knowledge with the world!
+        {% endif %}
+      </p>
+      {% if search_query or active_tag %}
+        <a href="/" class="inline-flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+          View All Posts
+        </a>
+      {% elif current_user %}
+        <a href="/posts/new" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
+          Create Post Now
+        </a>
+      {% else %}
+        <a href="/register" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
+          Sign Up to Write
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

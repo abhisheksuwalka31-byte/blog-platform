@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Author Dashboard - BlogVerse{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+
+  <!-- Author Header & Stats -->
+  <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 mb-10 shadow-sm">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-8 border-b border-slate-100">
+      <div class="flex items-center space-x-4">
+        <img src="{{ current_user.avatar_url or 'https://api.dicebear.com/7.x/initials/svg?seed=' + current_user.username }}" alt="{{ current_user.username }}" class="w-16 h-16 rounded-2xl border border-slate-200">
+        <div>
+          <h1 class="text-2xl font-black text-slate-900">{{ current_user.full_name or current_user.username }}</h1>
+          <p class="text-xs text-slate-400">@{{ current_user.username }} • {{ current_user.email }}</p>
+          {% if current_user.bio %}
+            <p class="text-xs text-slate-600 mt-1 max-w-xl">{{ current_user.bio }}</p>
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        <a href="/posts/new" class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl shadow-sm transition">
+          <i class="fa-solid fa-pen-nib text-xs"></i>
+          <span>Create New Post</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6">
+      <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Posts</div>
+        <div class="text-2xl font-black text-slate-900">{{ stats.total_posts }}</div>
+      </div>
+      <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+        <div class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">Published</div>
+        <div class="text-2xl font-black text-emerald-900">{{ stats.published_posts }}</div>
+      </div>
+      <div class="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+        <div class="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Drafts</div>
+        <div class="text-2xl font-black text-amber-900">{{ stats.draft_posts }}</div>
+      </div>
+      <div class="bg-rose-50 rounded-2xl p-4 border border-rose-100">
+        <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider mb-1">Total Likes Received</div>
+        <div class="text-2xl font-black text-rose-900">{{ stats.total_likes }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Posts Management Table -->
+  <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+    <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <h2 class="text-lg font-bold text-slate-900">Your Articles</h2>
+      <div class="text-xs text-slate-400">
+        Only you have permission to edit or delete your articles.
+      </div>
+    </div>
+
+    {% if posts %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+              <th class="py-3 px-6">Article</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4">Date</th>
+              <th class="py-3 px-4">Likes</th>
+              <th class="py-3 px-4">Comments</th>
+              <th class="py-3 px-6 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-xs sm:text-sm">
+            {% for post in posts %}
+              <tr id="dashboard-post-{{ post.id }}" class="hover:bg-slate-50/70 transition">
+                <td class="py-4 px-6 max-w-xs sm:max-w-md">
+                  <a href="/posts/{{ post.slug }}" class="font-bold text-slate-900 hover:text-indigo-600 transition block truncate">
+                    {{ post.title }}
+                  </a>
+                  <p class="text-slate-400 text-xs truncate mt-0.5">{{ post.summary or post.content[:80] }}</p>
+                </td>
+                <td class="py-4 px-4 whitespace-nowrap">
+                  {% if post.is_published %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                      Published
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                      Draft
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="py-4 px-4 text-slate-500 whitespace-nowrap text-xs">
+                  {{ post.created_at.strftime('%b %d, %Y') }}
+                </td>
+                <td class="py-4 px-4 text-slate-700 whitespace-nowrap">
+                  <div class="flex items-center space-x-1.5">
+                    <i class="fa-solid fa-heart text-rose-500 text-xs"></i>
+                    <span>{{ post.likes_count }}</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4 text-slate-700 whitespace-nowrap">
+                  <div class="flex items-center space-x-1.5">
+                    <i class="fa-regular fa-comment text-slate-400 text-xs"></i>
+                    <span>{{ post.comments_count }}</span>
+                  </div>
+                </td>
+                <td class="py-4 px-6 text-right whitespace-nowrap">
+                  <div class="flex items-center justify-end space-x-2">
+                    <a href="/posts/{{ post.slug }}" class="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition" title="View Public Post">
+                      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                    <a href="/posts/{{ post.id }}/edit" class="p-2 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-slate-100 transition" title="Edit Post">
+                      <i class="fa-solid fa-pen"></i>
+                    </a>
+                    <button onclick="deletePostFromDashboard({{ post.id }})" class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="Delete Post">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-16 px-6">
+        <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto mb-4 text-2xl">
+          <i class="fa-solid fa-pen-nib"></i>
+        </div>
+        <h3 class="text-base font-bold text-slate-800 mb-1">No articles published yet</h3>
+        <p class="text-slate-500 text-xs sm:text-sm mb-6 max-w-sm mx-auto">
+          Start writing and share your technical tutorials, career lessons, or insights with readers.
+        </p>
+        <a href="/posts/new" class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition">
+          <span>Write your first article</span>
+          <i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </a>
+      </div>
+    {% endif %}
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function deletePostFromDashboard(postId) {
+    if (!confirm('Are you sure you want to permanently delete this post?')) return;
+
+    try {
+      const response = await fetch(`/api/v1/posts/${postId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete post');
+      }
+
+      const row = document.getElementById(`dashboard-post-${postId}`);
+      if (row) {
+        row.remove();
+      }
+
+      showToast('Article deleted successfully.');
+    } catch (err) {
+      showToast('Error deleting article.', 'error');
+    }
+  }
+</script>
+{% endblock %}

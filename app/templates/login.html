@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - BlogVerse{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
+    <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200 mx-auto mb-4">
+      <i class="fa-solid fa-feather-pointed text-2xl"></i>
+    </div>
+    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Welcome back</h2>
+    <p class="mt-2 text-xs sm:text-sm text-slate-500">
+      Or <a href="/register{% if redirect_url %}?redirect={{ redirect_url }}{% endif %}" class="font-bold text-indigo-600 hover:text-indigo-500">create a new free account</a>
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
+    <div class="bg-white py-8 px-6 shadow-xl shadow-slate-100 rounded-3xl border border-slate-200/80 sm:px-10">
+      
+      <!-- Quick Demo Fill Helper -->
+      <div class="mb-6 p-3 bg-indigo-50 rounded-2xl border border-indigo-100">
+        <p class="text-[11px] font-bold text-indigo-900 mb-1.5 flex items-center space-x-1">
+          <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i>
+          <span>Demo Credentials (1-Click Fill):</span>
+        </p>
+        <div class="flex items-center space-x-2">
+          <button type="button" onclick="fillCredentials('alice@example.com', 'password123')" class="px-2.5 py-1 bg-white border border-indigo-200 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100/50 transition">
+            Alice (Author)
+          </button>
+          <button type="button" onclick="fillCredentials('bob@example.com', 'password123')" class="px-2.5 py-1 bg-white border border-indigo-200 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100/50 transition">
+            Bob (Reader)
+          </button>
+        </div>
+      </div>
+
+      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+        <div>
+          <label for="username_or_email" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Username or Email</label>
+          <input 
+            id="username_or_email" 
+            name="username_or_email" 
+            type="text" 
+            required 
+            placeholder="alice or alice@example.com" 
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+          >
+        </div>
+
+        <div>
+          <label for="password" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Password</label>
+          <input 
+            id="password" 
+            name="password" 
+            type="password" 
+            required 
+            placeholder="••••••••" 
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+          >
+        </div>
+
+        <div id="error-box" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium"></div>
+
+        <div>
+          <button 
+            type="submit" 
+            id="login-btn" 
+            class="w-full flex justify-center items-center space-x-2 py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition"
+          >
+            <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+            <span>Sign In</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const REDIRECT_URL = "{{ redirect_url or '/dashboard' }}";
+
+  function fillCredentials(identifier, pass) {
+    document.getElementById('username_or_email').value = identifier;
+    document.getElementById('password').value = pass;
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const errorBox = document.getElementById('error-box');
+    const submitBtn = document.getElementById('login-btn');
+    errorBox.classList.add('hidden');
+
+    const username_or_email = document.getElementById('username_or_email').value.trim();
+    const password = document.getElementById('password').value;
+
+    submitBtn.disabled = true;
+
+    try {
+      const response = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username_or_email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Login failed. Please check your credentials.');
+      }
+
+      // Store in localStorage as well for optional Bearer API usage
+      localStorage.setItem('access_token', data.access_token);
+      showToast('Logged in successfully!');
+
+      setTimeout(() => {
+        window.location.href = REDIRECT_URL;
+      }, 500);
+
+    } catch (err) {
+      errorBox.innerText = err.message;
+      errorBox.classList.remove('hidden');
+      submitBtn.disabled = false;
+    }
+  }
+</script>
+{% endblock %}

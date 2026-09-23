@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Edit "{{ post.title }}"{% else %}Create New Article{% endif %} - BlogVerse{% endblock %}
+
+{% block head %}
+<!-- Marked for live client-side markdown preview -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between pb-6 mb-8 border-b border-slate-200">
+    <div class="flex items-center space-x-3">
+      <a href="/dashboard" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black text-slate-900">
+          {% if is_edit %}Edit Article{% else %}Create New Article{% endif %}
+        </h1>
+        <p class="text-xs text-slate-400">Share your thoughts with Markdown support</p>
+      </div>
+    </div>
+
+    <!-- Mode switch: Edit / Preview -->
+    <div class="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+      <button type="button" id="tab-write" onclick="switchEditorTab('write')" class="px-3 py-1.5 rounded-lg bg-white text-indigo-600 shadow-sm transition">
+        Write
+      </button>
+      <button type="button" id="tab-preview" onclick="switchEditorTab('preview')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+        Preview
+      </button>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form id="editor-form" onsubmit="saveArticle(event)" class="space-y-6">
+
+    <!-- Title -->
+    <div>
+      <input 
+        type="text" 
+        id="post-title" 
+        required 
+        value="{{ post.title if is_edit else '' }}" 
+        placeholder="Article Title..." 
+        class="w-full text-2xl sm:text-4xl font-black placeholder:text-slate-300 text-slate-900 bg-transparent border-0 border-b border-transparent focus:border-indigo-500 focus:outline-none focus:ring-0 pb-3 transition"
+      >
+    </div>
+
+    <!-- Tags & Summary row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Tags</label>
+        <input 
+          type="text" 
+          id="post-tags" 
+          value="{{ post.tags if is_edit else '' }}" 
+          placeholder="e.g. python, backend, security" 
+          class="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+        >
+        <p class="text-[11px] text-slate-400 mt-1">Separate tags with commas</p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Short Summary (Optional)</label>
+        <input 
+          type="text" 
+          id="post-summary" 
+          value="{{ post.summary if is_edit and post.summary else '' }}" 
+          placeholder="A quick 1-2 sentence hook for the article card" 
+          class="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+        >
+      </div>
+    </div>
+
+    <!-- Main Content Area / Live Preview -->
+    <div class="relative min-h-[380px]">
+      
+      <!-- Write View -->
+      <div id="write-view" class="block">
+        <div class="flex items-center justify-between bg-slate-100 px-4 py-2 rounded-t-2xl border border-b-0 border-slate-200 text-xs text-slate-500">
+          <div class="flex items-center space-x-3">
+            <span class="font-bold text-slate-700">Markdown Editor</span>
+            <span>•</span>
+            <span class="text-slate-400">**bold**, *italic*, # Heading, ```code```</span>
+          </div>
+          <span id="word-count" class="font-medium text-slate-500">0 words</span>
+        </div>
+        <textarea 
+          id="post-content" 
+          required 
+          rows="16" 
+          oninput="updateWordCount()"
+          placeholder="Write your story here in Markdown...&#10;&#10;## Introduction&#10;Share your thoughts with code blocks, lists, and links."
+          class="w-full p-4 bg-white border border-slate-200 rounded-b-2xl font-mono text-sm leading-relaxed focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+        >{{ post.content if is_edit else '' }}</textarea>
+      </div>
+
+      <!-- Preview View -->
+      <div id="preview-view" class="hidden bg-white p-8 rounded-2xl border border-slate-200 min-h-[420px]">
+        <h1 id="preview-title" class="text-3xl font-extrabold text-slate-900 mb-6"></h1>
+        <article id="preview-body" class="prose prose-slate max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-indigo-600 prose-pre:bg-slate-900 prose-pre:text-slate-100">
+        </article>
+      </div>
+
+    </div>
+
+    <!-- Publishing Actions Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+      <div class="flex items-center space-x-3">
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input 
+            type="checkbox" 
+            id="post-published" 
+            class="sr-only peer" 
+            {% if (is_edit and post.is_published) or not is_edit %}checked{% endif %}
+          >
+          <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+          <span class="ml-3 text-xs sm:text-sm font-bold text-slate-700">Publish Immediately</span>
+        </label>
+        <span class="text-xs text-slate-400">(Uncheck to save as draft)</span>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <a href="/dashboard" class="px-4 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 transition">
+          Cancel
+        </a>
+        <button 
+          type="submit" 
+          id="save-btn" 
+          class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold px-6 py-2.5 rounded-xl shadow-sm transition"
+        >
+          <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+          <span>{% if is_edit %}Update Article{% else %}Publish Article{% endif %}</span>
+        </button>
+      </div>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const IS_EDIT = {{ 'true' if is_edit else 'false' }};
+  const POST_ID = {{ post.id if is_edit else 'null' }};
+
+  function updateWordCount() {
+    const text = document.getElementById('post-content').value.trim();
+    const words = text ? text.split(/\s+/).length : 0;
+    document.getElementById('word-count').innerText = `${words} words`;
+  }
+
+  function switchEditorTab(tab) {
+    const writeView = document.getElementById('write-view');
+    const previewView = document.getElementById('preview-view');
+    const tabWrite = document.getElementById('tab-write');
+    const tabPreview = document.getElementById('tab-preview');
+
+    if (tab === 'write') {
+      writeView.classList.remove('hidden');
+      previewView.classList.add('hidden');
+      tabWrite.className = "px-3 py-1.5 rounded-lg bg-white text-indigo-600 shadow-sm transition";
+      tabPreview.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+    } else {
+      writeView.classList.add('hidden');
+      previewView.classList.remove('hidden');
+      tabPreview.className = "px-3 py-1.5 rounded-lg bg-white text-indigo-600 shadow-sm transition";
+      tabWrite.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+
+      // Render Markdown preview
+      const title = document.getElementById('post-title').value.trim() || 'Untitled Article';
+      const content = document.getElementById('post-content').value.trim() || '*No content written yet.*';
+      document.getElementById('preview-title').innerText = title;
+      document.getElementById('preview-body').innerHTML = marked.parse(content);
+    }
+  }
+
+  async function saveArticle(e) {
+    e.preventDefault();
+
+    const title = document.getElementById('post-title').value.trim();
+    const tags = document.getElementById('post-tags').value.trim();
+    const summary = document.getElementById('post-summary').value.trim();
+    const content = document.getElementById('post-content').value.trim();
+    const is_published = document.getElementById('post-published').checked;
+
+    if (!title || !content) {
+      showToast('Please provide both a title and article content.', 'error');
+      return;
+    }
+
+    const saveBtn = document.getElementById('save-btn');
+    saveBtn.disabled = true;
+
+    const payload = {
+      title,
+      summary,
+      content,
+      tags,
+      is_published
+    };
+
+    try {
+      const url = IS_EDIT ? `/api/v1/posts/${POST_ID}` : '/api/v1/posts';
+      const method = IS_EDIT ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to save post');
+      }
+
+      const result = await response.json();
+      showToast(IS_EDIT ? 'Article updated successfully!' : 'Article published successfully!');
+      
+      setTimeout(() => {
+        window.location.href = `/posts/${result.slug}`;
+      }, 800);
+    } catch (err) {
+      showToast(err.message || 'Error saving article.', 'error');
+      saveBtn.disabled = false;
+    }
+  }
+
+  // Initialize word count on load
+  updateWordCount();
+</script>
+{% endblock %}
