@@ -99,9 +99,9 @@ def index_page(
     popular_tags = get_popular_tags(db)
 
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
+        request=request,
+        name="index.html",
+        context={
             "current_user": current_user,
             "posts": enriched_posts,
             "search_query": q,
@@ -123,9 +123,9 @@ def new_post_page(
         return RedirectResponse(url="/login?redirect=/posts/new", status_code=status.HTTP_303_SEE_OTHER)
 
     return templates.TemplateResponse(
-        "editor.html",
-        {
-            "request": request,
+        request=request,
+        name="editor.html",
+        context={
             "current_user": current_user,
             "is_edit": False,
             "post": None
@@ -176,9 +176,9 @@ def post_detail_page(
     }
 
     return templates.TemplateResponse(
-        "post_detail.html",
-        {
-            "request": request,
+        request=request,
+        name="post_detail.html",
+        context={
             "current_user": current_user,
             "post": post_dict
         }
@@ -206,9 +206,9 @@ def edit_post_page(
         raise HTTPException(status_code=403, detail="Unauthorized to edit another author's post.")
 
     return templates.TemplateResponse(
-        "editor.html",
-        {
-            "request": request,
+        request=request,
+        name="editor.html",
+        context={
             "current_user": current_user,
             "is_edit": True,
             "post": post
@@ -264,9 +264,9 @@ def dashboard_page(
     }
 
     return templates.TemplateResponse(
-        "dashboard.html",
-        {
-            "request": request,
+        request=request,
+        name="dashboard.html",
+        context={
             "current_user": current_user,
             "posts": posts_data,
             "stats": stats
@@ -284,9 +284,9 @@ def login_page(
         return RedirectResponse(url=redirect or "/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
     return templates.TemplateResponse(
-        "login.html",
-        {
-            "request": request,
+        request=request,
+        name="login.html",
+        context={
             "current_user": None,
             "redirect_url": redirect
         }
@@ -303,9 +303,9 @@ def register_page(
         return RedirectResponse(url=redirect or "/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
     return templates.TemplateResponse(
-        "register.html",
-        {
-            "request": request,
+        request=request,
+        name="register.html",
+        context={
             "current_user": None,
             "redirect_url": redirect
         }
