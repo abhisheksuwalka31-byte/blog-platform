@@ -86,7 +86,7 @@ For the complete API contract reference, see [docs/API_SPECIFICATION.md](docs/AP
 
 ### 1. Clone & Setup Workspace
 ```bash
-git clone <your-repo-url> blog-platform
+git clone https://github.com/abhisheksuwalka31-byte/blog-platform.git
 cd blog-platform
 ```
 
